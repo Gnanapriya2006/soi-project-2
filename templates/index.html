@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Authenticity Validator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* [STYLES ARE SAME AS PROVIDED BY USER] */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            min-height: 70vh;
+        }
+
+        .validator-panel {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(145deg, #f0f2ff, #e8ecff);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover {
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #ffeef0, #fff2e8);
+            transform: translateY(-5px);
+        }
+
+        .upload-zone.dragover {
+            border-color: #4ecdc4;
+            background: linear-gradient(145deg, #e8fff9, #f0fffd);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+        }
+
+        .scan-options {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+        }
+
+        .option-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .option-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .checkbox-custom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border: 2px solid #e0e6ff;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-custom:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .checkbox-custom input:checked+.checkmark {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-color: #667eea;
+        }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .checkmark::after {
+            content: '✓';
+            position: absolute;
+            font-size: 12px;
+            color: white;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .checkbox-custom input:checked+.checkmark::after {
+            opacity: 1;
+        }
+
+        .results-panel {
+            background: linear-gradient(180deg, #f8f9ff 0%, #e8f0fe 100%);
+            padding: 40px;
+            border-left: 4px solid #667eea;
+        }
+
+        .confidence-meter {
+            margin: 30px 0;
+        }
+
+        .meter-bg {
+            width: 100%;
+            height: 20px;
+            background: #e0e6ff;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .meter-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 2s ease;
+            position: relative;
+        }
+
+        .meter-fill.authentic {
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+        }
+
+        .meter-fill.fake {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a52);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 10px 5px 0 0;
+        }
+
+        .status-authentic {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .status-fake {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .status-unknown {
+            background: linear-gradient(45deg, #feca57, #ff9ff3);
+            color: #333;
+        }
+
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .detail-card.warning {
+            border-left-color: #ff6b6b;
+        }
+
+        .detail-card.success {
+            border-left-color: #4ecdc4;
+        }
+
+        .scan-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .scanning {
+            animation: pulse 1.5s infinite;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .option-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chat-panel {
+            margin-top: 30px;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+        }
+
+        .chat-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background: white;
+            border: 1px solid #e0e0e0;
+            color: #333;
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-input-area {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chat-send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Authenticity Validator Pro</h1>
+            <p>Advanced AI-powered document, image & signature verification</p>
+        </div>
+
+        <div class="main-content">
+            <div class="validator-panel">
+                <div class="upload-zone" id="uploadZone">
+                    <span class="upload-icon">📁</span>
+                    <h3>Drop your file here or click to browse</h3>
+                    <p>Supports PDF, images, documents (max 50MB)</p>
+                    <input type="file" class="file-input" id="fileInput"
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx">
+                    <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+                </div>
+
+                <div class="scan-options">
+                    <div class="option-group">
+                        <label>🔧 Scan Options</label>
+                        <div class="option-grid">
+                            <label class="checkbox-custom">
+                                <input type="checkbox" id="ocrCheck" checked>
+                                <span class="checkmark"></span>
+                                OCR Text Analysis
+                            </label>
+                            <label class="checkbox-custom">
+                                <input type="checkbox" id="signatureCheck" checked>
+                                <span class="checkmark"></span>
+                                Signature Verification
+                            </label>
+                            <label class="checkbox-custom">
+                                <input type="checkbox" id="metadataCheck">
+                                <span class="checkmark"></span>
+                                Metadata Analysis
+                            </label>
+                            <label class="checkbox-custom">
+                                <input type="checkbox" id="watermarkCheck">
+                                <span class="checkmark"></span>
+                                Watermark Detection
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn" id="scanBtn" onclick="runScan()" disabled>🚀 Run Advanced Scan</button>
+                </div>
+            </div>
+
+            <div class="results-panel">
+                <h3 style="margin-bottom: 20px; color: #333;">📊 Real-time Results</h3>
+
+                <div class="confidence-meter">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Confidence Score</span>
+                        <span id="confidenceScore">--%</span>
+                    </div>
+                    <div class="meter-bg">
+                        <div class="meter-fill" id="confidenceMeter" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="statusBadge" style="display: none;">
+                    <span class="status-badge" id="statusText"></span>
+                </div>
+
+                <div id="resultsContent">
+                    <div class="loading-spinner" id="loadingSpinner" style="display: none;"></div>
+                    <p style="text-align: center; color: #666; margin-top: 40px;">Upload a file and run scan to see
+                        results</p>
+                </div>
+
+                <div class="scan-history">
+                    <h4 style="margin-bottom: 15px; color: #333;">📋 Recent Scans</h4>
+                    <div id="historyList"></div>
+                </div>
+
+
+                <!-- Chat Interface -->
+                <div class="chat-panel" id="chatPanel" style="display: flex;">
+                    <div class="chat-header"><span>🤖</span> AI Forensics Assistant</div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ai">Hello! I am your AI Forensics Assistant. You can ask me anything about
+                            document authenticity, or upload a file for a detailed analysis!
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..."
+                            onkeypress="checkEnter(event)">
+                        <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        let scanHistory = JSON.parse(localStorage.getItem('scanHistory')) || [];
+        let scanId = 0;
+        let currentContext = {};
+
+
+        // Update history display
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = scanHistory.slice(-5).map(item => `
+                <div class="history-item">
+                    <div>
+                        <strong>${item.fileName}</strong><br>
+                        <small>${new Date(item.timestamp).toLocaleString()}</small>
+                    </div>
+                    <span class="status-badge ${item.status === 'Authentic' ? 'status-authentic' : 'status-fake'}">
+                        ${item.status} (${item.confidence}%)
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // File upload handling
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'), false);
+        });
+
+        uploadZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            handleFiles(e.target.files);
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                currentFile = files[0];
+                uploadZone.innerHTML = `
+                    <span class="upload-icon">✅</span>
+                    <h3>${currentFile.name}</h3>
+                    <p><strong>${formatFileSize(currentFile.size)}</strong> - Ready to scan</p>
+                    <button class="btn" onclick="document.getElementById('scanBtn').click()">Start Scan</button>
+                `;
+                document.getElementById('scanBtn').disabled = false;
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // --- BACKEND INTEGRATION STARTS HERE ---
+
+        async function runScan() {
+            if (!currentFile) return;
+
+            const scanBtn = document.getElementById('scanBtn');
+            const resultsContent = document.getElementById('resultsContent');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const statusBadge = document.getElementById('statusBadge');
+
+            scanBtn.disabled = true;
+            scanBtn.textContent = '⏳ Scanning...';
+            scanBtn.classList.add('scanning');
+            loadingSpinner.style.display = 'block';
+            resultsContent.innerHTML = '<p style="text-align: center; color: #666;">🔍 Uploading and Analyzing...</p>';
+
+            // Create FormData to send file to backend
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+
+                const data = await response.json();
+
+                // Use data from backend
+                const isAuthentic = data.isAuthentic;
+                const confidence = data.confidence;
+                const results = data.details;
+
+                displayResults(results, confidence, isAuthentic);
+                saveToHistory(currentFile.name, confidence, isAuthentic ? 'Authentic' : 'Fake');
+
+            } catch (error) {
+                console.error(error);
+                resultsContent.innerHTML = '<p style="text-align: center; color: red;">❌ Error processing file.</p>';
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.textContent = '🔄 Scan Again';
+                scanBtn.classList.remove('scanning');
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        // Chat Logic
+        function checkEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Loading state
+            const loadingId = addMessage('Thinking...', 'ai', true);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        context: currentContext
+                    })
+                });
+
+                const data = await response.json();
+
+                // Remove loading and add AI response
+                removeMessage(loadingId);
+
+                if (data.error) {
+                    addMessage('Error: ' + data.error, 'ai');
+                } else {
+                    addMessage(data.response.replace(/\n/g, '<br>'), 'ai');
+                }
+
+            } catch (error) {
+                removeMessage(loadingId);
+                addMessage('Connection error. Please try again.', 'ai');
+            }
+        }
+
+        function addMessage(text, sender, isLoading = false) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            msgDiv.innerHTML = text; // Use innerHTML for formatting
+            if (isLoading) msgDiv.id = 'loading-' + Date.now();
+
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            return msgDiv.id;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+
+        function displayResults(results, confidence, isAuthentic) {
+            const resultsContent = document.getElementById('resultsContent');
+            const confidenceMeter = document.getElementById('confidenceMeter');
+            const confidenceScore = document.getElementById('confidenceScore');
+            const statusText = document.getElementById('statusText');
+            const statusBadge = document.getElementById('statusBadge');
+
+            confidenceMeter.style.width = confidence + '%';
+            confidenceMeter.className = 'meter-fill ' + (isAuthentic ? 'authentic' : 'fake');
+            confidenceScore.textContent = Math.round(confidence) + '%';
+            statusBadge.style.display = 'block';
+
+            statusText.textContent = isAuthentic ? '✅ AUTHENTIC' : '❌ POTENTIALLY FAKE';
+            statusText.className = 'status-badge ' + (isAuthentic ? 'status-authentic' : 'status-fake');
+
+            resultsContent.innerHTML = `
+                <div class="detail-card ${isAuthentic ? 'success' : 'warning'}">
+                    <h4>🎯 Overall Assessment</h4>
+                    <p>${isAuthentic ?
+                    'Document appears genuine based on comprehensive analysis across multiple verification parameters.' :
+                    'Document shows signs of manipulation. Multiple anomalies detected.'}
+                    </p>
+                </div>
+
+                <div class="detail-card">
+                    <h4>📊 Detailed Analysis</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div><strong>OCR Text:</strong> ${results.ocr ? '✅ Passed' : '⚠️ Anomalies'}</div>
+                        <div><strong>Signature:</strong> ${results.signature ? '✅ Valid' : '❌ Suspicious'}</div>
+                        <div><strong>Metadata:</strong> ${results.metadata ? '✅ Clean' : '⚠️ Altered'}</div>
+                        <div><strong>Watermarks:</strong> ${results.watermark ? '✅ None' : '❌ Detected'}</div>
+                        <div><strong>Font Check:</strong> ${results.fontConsistency ? '✅ Consistent' : '⚠️ Inconsistent'}</div>
+                        <div><strong>Pixel Check:</strong> ${results.pixelAnomalies ? '✅ Clean' : '❌ Manipulated'}</div>
+                    </div>
+                </div>
+            `;
+
+            // Show Chat Panel and update context
+            const chatPanel = document.getElementById('chatPanel');
+            if (chatPanel.style.display !== 'flex') {
+                chatPanel.style.display = 'flex';
+            }
+
+            currentContext = {
+                isAuthentic: isAuthentic,
+                confidence: confidence,
+                details: results
+            };
+        }
+
+        function saveToHistory(fileName, confidence, status) {
+            scanHistory.unshift({
+                id: ++scanId,
+                fileName,
+                confidence: Math.round(confidence),
+                status,
+                timestamp: Date.now()
+            });
+
+            if (scanHistory.length > 50) {
+                scanHistory = scanHistory.slice(0, 50);
+            }
+
+            localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+            updateHistory();
+        }
+
+        // Initialize
+        updateHistory();
+    </script>
+</body>
+
+</html>

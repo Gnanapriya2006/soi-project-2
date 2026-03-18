@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+uploads/
+model.pkl
+dataset/
+test_documents/
+.gemini/
+.agent/
+.agents/
+brain/

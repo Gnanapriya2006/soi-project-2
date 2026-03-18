@@ -1,0 +1,10 @@
+flask
+werkzeug
+pillow
+numpy
+joblib
+google-generativeai
+python-dotenv
+scikit-learn
+requests
+gunicorn
